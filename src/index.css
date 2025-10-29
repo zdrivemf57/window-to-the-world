@@ -1,0 +1,29 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* ← ここがURLバー抑制のポイント */
+  touch-action: none; /* ← スワイプでUIバーが出るのを防ぐ */
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* iOSの「本当の画面高さ」を取得 */
+:root {
+  --vh: 100%;
+}
+
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --vh: calc(100vh - env(safe-area-inset-bottom));
+  }
+}
+
+/* React全体を全画面にするクラス */
+.fullscreen {
+  height: calc(var(--vh, 1vh) * 100);
+  width: 100%;
+  overflow: hidden;
+}
