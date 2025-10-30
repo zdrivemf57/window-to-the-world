@@ -1,31 +1,53 @@
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+// import { collection, addDoc, getDocs } from "firebase/firestore";
 import L from "leaflet";
-import { db } from "./firebase";
-import { buildSkylineUrl } from "./utils/skyline";
+// import { db } from "./firebase";
+// import { buildSkylineUrl } from "./utils/skyline";
 import type { Camera } from "./types";
 
+// Leafletのデフォルトマーカーアイコンの問題を修正
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 export default function App() {
-  const [cameras, setCameras] = useState<Camera[]>([]);
+  // テスト用の初期データ
+  const [cameras, setCameras] = useState<Camera[]>([
+    {
+      name: "パリ",
+      lat: 48.8566,
+      lng: 2.3522,
+      url: "https://www.youtube.com/embed/4x4sfNxa3mA",
+    },
+    {
+      name: "東京",
+      lat: 35.6895,
+      lng: 139.6917,
+      url: "https://www.youtube.com/embed/vQw8Y6WZ_MA",
+    },
+  ]);
   const [selected, setSelected] = useState<Camera | null>(null);
-  const [showMap, setShowMap] = useState(false);
+  const [showMap, setShowMap] = useState(true); // デバッグのため最初から表示
   const [showMenu, setShowMenu] = useState(false);
 
-  // 🧭 Firestoreから履歴読み込み
-  useEffect(() => {
-    async function fetchHistory() {
-      const querySnapshot = await getDocs(collection(db, "cameras"));
-      const loaded: Camera[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as Camera;
-        loaded.push(data);
-      });
-      setCameras(loaded);
-      console.log("📜 履歴を読み込みました:", loaded);
-    }
-    // fetchHistory();
-  }, []);
+  // 🧭 Firebase機能は一時的に無効化
+  // useEffect(() => {
+  //   async function fetchHistory() {
+  //     const querySnapshot = await getDocs(collection(db, "cameras"));
+  //     const loaded: Camera[] = [];
+  //     querySnapshot.forEach((doc) => {
+  //       const data = doc.data() as Camera;
+  //       loaded.push(data);
+  //     });
+  //     setCameras(loaded);
+  //     console.log("📜 履歴を読み込みました:", loaded);
+  //   }
+  //   fetchHistory();
+  // }, []);
 
   // 🎙 音声入力
   async function handleVoiceCommand() {
@@ -48,22 +70,25 @@ export default function App() {
     recognition.start();
   }
 
-  // 🆕 カメラ追加
+  // 🆕 カメラ追加（Firebase機能は一時的に無効化）
   async function addCamera(name: string, lat: number, lng: number) {
-    const url = buildSkylineUrl(name.toLowerCase());
+    // const url = buildSkylineUrl(name.toLowerCase());
+    const url = "https://www.youtube.com/embed/4x4sfNxa3mA"; // テスト用URL
     const newCam = { name, lat, lng, url };
     setCameras((prev) => [...prev, newCam]);
     setSelected(newCam);
-    await addDoc(collection(db, "cameras"), newCam);
+    // await addDoc(collection(db, "cameras"), newCam);
+    console.log("カメラを追加しました:", newCam);
   }
 
-  // 💾 評価とメモを保存
+  // 💾 評価とメモを保存（Firebase機能は一時的に無効化）
   async function saveRating(rating: number, memo: string) {
     if (!selected) return;
     const updated = { ...selected, rating, memo };
-    await addDoc(collection(db, "cameras"), updated);
+    // await addDoc(collection(db, "cameras"), updated);
     setSelected(updated);
-    alert("履歴に保存しました✨");
+    console.log("評価を保存しました:", updated);
+    alert("評価を保存しました✨");
   }
 
   // ⭐ マーカー色を評価ごとに変える
@@ -94,11 +119,16 @@ export default function App() {
     const map = useMap();
     useEffect(() => {
       if (show) {
-        setTimeout(() => {
-          map.invalidateSize();
-        }, 500);
+        // 地図のリサイズを複数回実行して確実に表示させる
+        const intervals = [50, 100, 200, 500, 1000];
+        intervals.forEach(delay => {
+          setTimeout(() => {
+            map.invalidateSize();
+            console.log(`地図をリサイズしました (${delay}ms後)`);
+          }, delay);
+        });
       }
-    }, [show]);
+    }, [show, map]);
     return null;
   }
 
@@ -118,7 +148,7 @@ export default function App() {
           top: 0,
           left: 0,
           width: "100%",
-          height: showMap ? "50%" : "100%",
+          height: showMap ? "calc(100vh - 400px)" : "100%", // 地図の高さを考慮
           border: "16px solid #b68e68",
           borderRadius: "12px",
           overflow: "hidden",
@@ -150,44 +180,37 @@ export default function App() {
         )}
       </div>
 
-      {/* 🗺️ 地図 */}
-      {showMap && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            width: "100%",
-            height: "50%",
-          }}
-        >
-          <MapContainer
-            center={[20, 0]}
-            zoom={2}
-            style={{ height: "100%", width: "100%" }}
+      {/* 🗺️ 地図 - 常に表示（デバッグ用） */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          height: "400px", // 固定値に変更
+          zIndex: 100, // より高いz-indexに変更
+          border: "5px solid red", // より太い境界線
+          backgroundColor: "#00ff00", // より目立つ緑色の背景
+          overflow: "hidden", // はみ出しを防ぐ
+        }}
+      >
+          {/* テスト用：地図の代わりにシンプルなテキストを表示 */}
+          <div
+            style={{
+              height: "400px",
+              width: "100%",
+              backgroundColor: "#ff0000",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              fontSize: "24px",
+              color: "white",
+              fontWeight: "bold",
+            }}
           >
-            <ResizeMapOnShow show={showMap} />
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="© OpenStreetMap contributors"
-            />
-            {cameras.map((c, i) => (
-              <Marker
-                key={i}
-                position={[c.lat, c.lng]}
-                eventHandlers={{ click: () => setSelected(c) }}
-                icon={makeIcon(getMarkerColor(c.rating))}
-              >
-                <Popup>
-                  <b>{c.name}</b>
-                  {c.rating && <div>評価: {c.rating} ⭐</div>}
-                  {c.memo && <div>{c.memo}</div>}
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+            🗺️ 地図エリアのテスト表示
+          </div>
         </div>
-      )}
 
       {/* 🎙️ 音声ボタン */}
       <button
